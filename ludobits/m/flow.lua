@@ -28,6 +28,7 @@
 -- 	end
 --
 
+---@class ludobits_flow
 local M = {}
 
 local instances = {}
