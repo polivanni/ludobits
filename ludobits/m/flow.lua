@@ -54,7 +54,7 @@ local function ensure_hash(s)
 end
 
 local function ensure_hashes(t)
-	for k,v in pairs(t) do
+	for k, v in pairs(t) do
 		t[k] = ensure_hash(v)
 	end
 	return t
@@ -157,10 +157,9 @@ function M.start(fn, options, on_error)
 		end)
 	else
 		update_flow(0, created_instance.co)
-	end 
+	end
 	return created_instance
 end
-
 
 function M.parallel(fn, on_error)
 	return M.start(fn, { parallel = true }, on_error)
@@ -169,7 +168,6 @@ end
 function M.parallel_group(group_id, fn, on_error)
 	return M.start(fn, { parallel = true, group_id = group_id }, on_error)
 end
-
 
 --- Stop a created flow before it has completed
 -- @param instance This can be either the returned value from
@@ -183,14 +181,13 @@ function M.stop(instance)
 	elseif type(instance) == "thread" then
 		instances[instance] = nil
 	else
-		for k,v in pairs(instances) do
+		for k, v in pairs(instances) do
 			if v.url == instance then
 				instances[k] = nil
 			end
 		end
 	end
 end
-
 
 --- Wait until a certain time has elapsed
 -- @param seconds
@@ -205,7 +202,6 @@ function M.delay(seconds)
 	return coroutine.yield()
 end
 
-
 --- Wait until a certain number of frames have elapsed
 -- @param frames
 function M.frames(frames)
@@ -219,11 +215,9 @@ function M.frames(frames)
 	return coroutine.yield()
 end
 
-
 function M.yield()
 	return coroutine.yield()
 end
-
 
 --- Wait until a function returns true
 -- @param fn
@@ -234,7 +228,6 @@ function M.until_true(fn)
 	instance.condition = fn
 	return coroutine.yield()
 end
-
 
 --- Wait until any message is received
 -- @return message_id
@@ -251,7 +244,6 @@ function M.until_any_message()
 	end
 	return coroutine.yield()
 end
-
 
 --- Wait until a specific message is received
 -- @param message_1 Message to wait for
@@ -278,6 +270,21 @@ function M.until_message(...)
 	return coroutine.yield()
 end
 
+function M.until_message_with(message_id, message_key, message_value)
+	local message_id_to_wait_for = ensure_hash(message_id)
+	local instance = create_or_get(coroutine.running())
+	instance.state = WAITING
+	instance.on_message = function(message_id, message, sender)
+		if message_id == message_id_to_wait_for and message and message[message_key] == message_value then
+			instance.result = table_pack(message_id, message, sender)
+			instance.on_message = nil
+			instance.state = READY
+			resume(instance)
+		end
+	end
+	return coroutine.yield()
+end
+
 --- Waiting to receive all specific messages.
 -- @param message_1 Message to wait for
 -- @param message_2 Message to wait for
@@ -292,12 +299,12 @@ function M.until_all_messages(...)
 	instance.on_message = function(message_id, message, sender)
 		for i, message_id_to_wait_for in pairs(message_ids_to_wait_for) do
 			if message_id == message_id_to_wait_for then
-                table.remove(message_ids_to_wait_for, i)
+				table.remove(message_ids_to_wait_for, i)
 				break
 			end
 		end
 
-        if #message_ids_to_wait_for == 0 then
+		if #message_ids_to_wait_for == 0 then
 			instance.result = table_pack(message_id, message, sender)
 			instance.on_message = nil
 			instance.state = READY
@@ -307,7 +314,6 @@ function M.until_all_messages(...)
 	return coroutine.yield()
 end
 
-
 --- Wait until input action with pressed state
 -- @param action_1 Action to wait for (nil for any action)
 -- @param action_2 Action to wait for
@@ -315,7 +321,7 @@ end
 -- @return action_id
 -- @return action
 function M.until_input_pressed(...)
-	local action_ids_to_wait_for =  ensure_hashes({ ... })
+	local action_ids_to_wait_for = ensure_hashes({ ... })
 	local instance = create_or_get(coroutine.running())
 	instance.state = WAITING
 	if #action_ids_to_wait_for == 0 then
@@ -344,7 +350,6 @@ function M.until_input_pressed(...)
 	end
 	return coroutine.yield()
 end
-
 
 --- Wait until input action with released state
 -- @param action_1 Action to wait for (nil for any action)
@@ -400,7 +405,6 @@ function M.until_callback(fn, ...)
 	return coroutine.yield()
 end
 
-
 local function load_collection_proxy(collection_url, method)
 	assert(collection_url, "You must provide a URL to a collection proxy")
 	assert(method)
@@ -423,7 +427,6 @@ end
 function M.load(collection_url)
 	return load_collection_proxy(collection_url, "load")
 end
-
 
 --- Load a collection asynchronously and wait until it is loaded and enabled
 -- @param collection_url
@@ -491,7 +494,6 @@ function M.go_animate(url, property, playback, to, easing, duration, delay)
 	end)
 end
 
-
 --- Call gui.animate and wait until it has finished
 -- NOTE: The argument order differs from gui.animate() (playback is shifted
 -- to the same position as for go.animate)
@@ -513,7 +515,6 @@ function M.gui_animate(node, property, playback, to, easing, duration, delay)
 		gui.animate(node, property, to, easing, duration, delay or 0, cb, playback)
 	end)
 end
-
 
 --- Play a sprite animation and wait until it has finished
 -- @param sprite_url
@@ -574,11 +575,10 @@ function M.update()
 	print("flow.update() is deprecated. You no longer need to call it!")
 end
 
-
 --- Forward any received messages in your scripts to this function
 function M.on_message(message_id, message, sender)
 	local url = msg.url()
-	for _,instance in pairs(instances) do
+	for _, instance in pairs(instances) do
 		if instance.on_message and instance.url == url then
 			instance.on_message(message_id, message, sender)
 		end
@@ -587,7 +587,7 @@ end
 
 function M.on_input(action_id, action)
 	local url = msg.url()
-	for _,instance in pairs(instances) do
+	for _, instance in pairs(instances) do
 		if instance.on_input and instance.url == url then
 			instance.on_input(action_id, action)
 		end
